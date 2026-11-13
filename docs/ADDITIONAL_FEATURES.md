@@ -30,6 +30,8 @@ Turn a photo-based or scanned PDF into a newly typeset, text-based PDF. The user
 - OCR should work offline by default; explain if a language pack or OCR engine must be downloaded separately.
 - Add regression tests for page order, text extraction/search, Bengali shaping, mixed-language text, low-confidence pages, and large-document memory use.
 
+Detailed OCR Studio specification, UX workflow, architecture, delivery phases, and acceptance tests: [OCR_CLEAN_PDF_PLAN.md](OCR_CLEAN_PDF_PLAN.md). The feature must generate Book Style, Clean Text Style, or Both from one corrected OCR project.
+
 ## Priority 1 — High-value additions
 
 | Feature | What it does | Why it belongs |
