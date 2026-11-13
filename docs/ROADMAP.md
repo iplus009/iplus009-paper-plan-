@@ -22,12 +22,15 @@ Exit: feature matrix updated; no duplicate engine/navigation stack.
 Serializable document model; persistence; canvas renderer/hit testing; text/image/shape/line elements; backgrounds; page sizing; selection/move/resize/rotate; layers; undo/redo; multi-page operations.
 Exit: create, save, reopen and edit a multi-page design.
 
-## Phase 4: OCR to Clean PDF
+## Phase 4: Camera Scan + OCR Studio
+- Add in-app single-page and multi-page CameraX capture after dependency/license audit.
+- Request CAMERA runtime permission only after an explicit Scan action; retain SAF import when denied.
+- Add capture preview, retake, crop, reorder, rotate, delete, and direct image-PDF export.
 - Extend the existing OCR pipeline after source-level verification.
 - Support both Original Book Style and Clean Text Style outputs from one corrected OCR text model.
 - Add Bengali/English recognition validation, per-page review/correction, progress, cancellation, and resumable processing for large scans.
 - Export selectable/searchable PDF text and preserve the original input; document limitations for tables, equations, and complex layouts.
-Exit: a multi-page scan can be OCR-processed, reviewed, and exported in both styles with page order and text-search tests passing.
+Exit: single/multi-page camera scans export to PDF; a multi-page scan can also be OCR-processed, reviewed, and exported in both styles with page order and text-search tests passing.
 
 ## Phase 5: templates and export
 Template browser; Bengali/English typography; vector PDF and PNG export; font embedding/fallback; export preview and error recovery.
