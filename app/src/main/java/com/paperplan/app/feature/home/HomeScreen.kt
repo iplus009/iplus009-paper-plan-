@@ -3,13 +3,14 @@ package com.paperplan.app.feature.home
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,8 +28,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.paperplan.app.R
 import com.paperplan.app.core.ui.theme.PaperMuted
 
 @Composable
@@ -49,10 +53,20 @@ fun HomeScreen() {
             modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("iPlus  /  DOCUMENT TOOLS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-                Text("Paper Plan", style = MaterialTheme.typography.headlineLarge)
-                Text("Make your own PDF better than anyone.", color = PaperMuted)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_paper_plan_foreground),
+                    contentDescription = "Paper Plan logo",
+                    modifier = Modifier.size(48.dp)
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("iPlus presents", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+                    Text("Paper Plan", style = MaterialTheme.typography.headlineLarge)
+                    Text("Make your own PDF better than anyone.", color = PaperMuted)
+                }
             }
 
             Card(
