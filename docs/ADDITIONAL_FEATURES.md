@@ -2,6 +2,34 @@
 
 These additions extend Paper Plan beyond the two source projects. They are proposals for the Paper Plan product; they are **not implemented yet**. Each feature must be checked against both codebases before porting or building it.
 
+
+## Priority 1 — OCR to Clean PDF (new)
+
+Turn a photo-based or scanned PDF into a newly typeset, text-based PDF. The user can choose **both output styles** from the same OCR result:
+
+1. **Original Book Style:** reconstruct a book-like layout with configurable page size, margins, font, paragraph spacing, headings, and page numbering. This aims to preserve the reading structure, but should not promise pixel-perfect reproduction of the photographed pages.
+2. **Clean Text Style:** reflow recognized text into a simple, readable document with consistent typography, spacing, and paragraph layout.
+
+### Workflow
+- Import a multi-page scanned/photo PDF or a set of page images.
+- Run batch, on-device OCR with Bengali and English language support where language data is installed.
+- Preserve page order and keep a source-page reference for every recognized text block.
+- Show OCR confidence and flag pages/regions that need review.
+- Allow users to correct recognized text before export; support previewing a few pages before processing/exporting the full document.
+- Provide a choice of output style: Original Book Style, Clean Text Style, or both.
+- Offer page size, font, margins, line spacing, paragraph alignment, and page-number controls.
+- Export selectable, searchable text as real PDF text—not a single flattened page image. Keep embedded images/figures as optional retained content where practical.
+- Provide a completion report with pages processed, pages needing review, and OCR failures.
+
+### Important limitations and engineering requirements
+- OCR may misread blurred, skewed, shadowed, low-resolution, handwritten, mathematical, or complex multi-column content. Make uncertainty visible and let users correct it.
+- Bengali conjuncts, punctuation, mixed Bangla-English text, and font shaping/embedding need dedicated test fixtures.
+- Tables, equations, footnotes, diagrams, and complex book layouts may not be reconstructed exactly; preserve them as images or mark them for manual review rather than silently inventing structure.
+- A 300-page job must run in bounded batches with progress, cancellation, resumability/recovery, and memory-aware image processing. Do not load all page bitmaps into memory at once.
+- Keep the original PDF untouched and save the generated document as a separate output.
+- OCR should work offline by default; explain if a language pack or OCR engine must be downloaded separately.
+- Add regression tests for page order, text extraction/search, Bengali shaping, mixed-language text, low-confidence pages, and large-document memory use.
+
 ## Priority 1 — High-value additions
 
 | Feature | What it does | Why it belongs |
