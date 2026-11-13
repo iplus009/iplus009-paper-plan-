@@ -5,7 +5,7 @@
 | Merge/split/rotate/reorder | Existing operations/screens | UX patterns | Keep one tested engine |
 | Compress | Existing compressor | Savings estimate UX | Keep engine; port estimate UX if needed |
 | Sign/watermark | Existing | Dedicated views | Keep foundation; compare UX |
-| OCR/scan | Existing flavor-specific implementations | — | Preserve flavor-aware behavior; validate offline |
+| OCR/scan | Existing flavor-specific implementations | — | Audit and reuse existing OCR where suitable; add CameraX single/multi-page capture, permission-on-demand, scan cleanup, and OCR Studio flow |
 | Search/viewer/print | Existing viewer/search | Search/print/page-jump patterns | One unified viewer |
 | Compare PDFs | Verify exact current coverage | Dedicated UI | Port if missing/incomplete |
 | Grayscale | Verify exact current coverage | Dedicated operation | Port if missing |
