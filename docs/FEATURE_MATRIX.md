@@ -13,7 +13,7 @@
 | PDF to ZIP | Verify exact current coverage | Dedicated tool | Port if missing |
 | Embedded image extraction | Verify exact current coverage | Dedicated tool | Port if missing |
 | Custom home tools | Inspect existing settings | Customizable grid | Port interaction |
-| OCR to Clean PDF | Existing flavor-specific OCR; inspect extraction/export capability | — | Extend OCR pipeline to generate both book-style and clean reflowed text PDFs; verify Bengali and large-file support |
+| OCR Studio / OCR to Clean PDF | Existing flavor-specific OCR; audit engine, languages, and export path | — | Build a resumable OCR project with image cleanup, side-by-side correction, structure editing, and Book Style + Clean Text + Both export from one corrected text model; see [OCR plan](OCR_CLEAN_PDF_PLAN.md) |
 | PDF Designer | Not target feature | Not present | Build new feature |
 | Templates/layers/undo | — | — | Build new design model/editor |
 
