@@ -1,6 +1,6 @@
 # Paper Plan Build Status
 
-## Initial Android foundation
+## Android foundation
 
 - Android application module: `:app`
 - Namespace / application ID: `com.paperplan.app`
@@ -8,16 +8,27 @@
 - Compile SDK: 36
 - Java target: 17
 - UI: Kotlin + Jetpack Compose + Material 3
-- First implemented interaction: Android Storage Access Framework PDF picker
+- PDF import: Android Storage Access Framework picker
+- Brand identity: Paper Plan by iPlus
+- Launcher icon: vector adaptive icon
 - CI: GitHub Actions debug APK build and artifact upload
 
-## Current limitations
+## Implemented in this foundation
 
-This is the initial launchable app foundation, not the complete Paper Plan product. Tool cards are currently navigation placeholders. PDF processing engines, CameraX scanner, OCR pipeline, Designer, Office conversion, and online translation backend have not yet been integrated.
+- Launchable Compose home screen
+- iPlus / Paper Plan brand line in the app
+- PDF file selection through Android's document picker
+- Tool catalogue separated from the Home screen
+- Centralized Compose theme tokens
+- Android launcher icon resources
+
+## Not implemented yet
+
+PDF merge/split/compression engines, CameraX scanner, OCR pipeline, PDF designer, Office conversion, and online translation backend. Tool cards remain entry-point placeholders until each feature is integrated and tested.
 
 ## Build verification
 
-A GitHub Actions workflow is configured at `.github/workflows/android-debug.yml`. The first CI run must complete successfully before an APK can be described as build-verified.
+The initial Android Debug Build workflow completed successfully. The branding/resources and refactored source in the latest commit must pass CI again before this revision is considered build-verified.
 
 ## Source preservation
 
