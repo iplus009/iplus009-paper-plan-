@@ -14,7 +14,7 @@ The two outputs must be generated from one canonical OCR text model, so correcti
 
 ## 2. End-to-end user journey
 
-1. **Import** — choose a scanned PDF or multiple page images through Android Storage Access Framework.
+1. **Capture or Import** — start the in-app Camera Scan for a new single-page or multi-page document, or import an existing scanned PDF/images through Android Storage Access Framework. Camera permission is requested only after the user taps Scan; it is not requested at app launch. If denied, PDF/image import remains available.
 2. **Preflight** — inspect page count, dimensions, rotation, image quality, and estimated storage/time. Let the user choose all pages, a range, or selected pages.
 3. **Image cleanup** — optional per-page auto-rotate, crop/edge detection, perspective correction/dewarp, deskew, shadow reduction, denoise, and contrast/brightness enhancement. Always keep the untouched source.
 4. **Language setup** — choose Bengali, English, or mixed-language recognition. Detect likely language as a suggestion, not an unquestionable decision. Clearly show when an OCR language model is missing and whether it needs a one-time download.
@@ -27,7 +27,21 @@ The two outputs must be generated from one canonical OCR text model, so correcti
 
 ## 3. Feature specification
 
-### A. Scan cleanup toolkit
+### A. In-app Camera Scan
+- Provide a dedicated Scan to PDF entry point with Single Page and Multi-page modes.
+- Use CameraX for an in-app capture experience, subject to source/dependency/license audit.
+- Request Android CAMERA runtime permission only when the user starts scanning, never on first launch or for unrelated PDF tools.
+- Explain why camera access is needed. If permission is denied, keep Import PDF/Images available; do not block the rest of the app. If permanently denied, offer a route to Android app settings without repeatedly prompting.
+- Multi-page session: capture page → preview → retake or accept → add next page → reorder/rotate/crop/delete → finish.
+- Single-page session: capture → preview/crop → create PDF.
+- Include auto edge detection, perspective correction, deskew, flash toggle where supported, and optional color/grayscale/black-and-white processing.
+- Save each accepted page safely as the session progresses; recover an interrupted scan session where feasible.
+- Export captured pages directly to a normal image-based PDF, or continue into OCR Studio to create searchable PDF and Book Style/Clean Text outputs.
+- Keep capture and OCR separate actions so users can create a PDF without running OCR.
+- Do not add microphone, location, or broad storage permissions for camera scanning.
+- Alternative system document-scanner integration may be evaluated, but must not be the only path if it adds a required Play Services dependency or compromises offline behavior.
+
+### B. Scan cleanup toolkit
 - Batch auto-orientation and deskew.
 - Detect page boundaries and allow manual crop adjustment.
 - Optional perspective correction for photographed pages.
@@ -35,7 +49,7 @@ The two outputs must be generated from one canonical OCR text model, so correcti
 - Before/after preview and reset-to-original.
 - Never destructively overwrite the source.
 
-### B. OCR and language handling
+### C. OCR and language handling
 - Bengali and English, including mixed paragraphs.
 - Preserve Unicode text; test Bengali conjuncts, vowel signs, punctuation, numerals, and mixed-script lines.
 - Per-page OCR confidence and low-confidence review queue.
@@ -43,7 +57,7 @@ The two outputs must be generated from one canonical OCR text model, so correcti
 - Preserve source page number and region coordinates for traceability.
 - Offline-first processing. Do not upload documents to a server by default.
 
-### C. Review and correction
+### D. Review and correction
 - Original image ↔ extracted text split view.
 - Tap a text block to locate its source region when coordinates are available.
 - Edit text, split/join paragraphs, correct reading order, and add/remove page breaks.
@@ -51,27 +65,27 @@ The two outputs must be generated from one canonical OCR text model, so correcti
 - Keep a correction history with undo/redo.
 - Bulk find/replace for repeated OCR mistakes, with preview before applying.
 
-### D. Book Style output
+### E. Book Style output
 - A4, A5, Letter, and custom page sizes.
 - Book-like font choices, margins, line spacing, paragraph indentation/alignment, heading hierarchy, and page numbering.
 - Optional chapter title pages and table of contents generated from user-confirmed headings.
 - Optional preservation of selected illustrations and diagrams.
 - Reflow text to clean pages; do not stretch OCR text to mimic photographed page coordinates.
 
-### E. Clean Text output
+### F. Clean Text output
 - Simple readable typography and consistent spacing.
 - Normalize accidental line breaks and join wrapped lines where safe.
 - Preserve paragraph boundaries, headings, lists, and user-approved page breaks.
 - Optional compact layout and larger-text reading layout.
 - Searchable/selectable real PDF text.
 
-### F. Both output mode
+### G. Both output mode
 - Generate Book Style and Clean Text from one canonical corrected text document.
 - Allow separate export settings for each output.
 - Display both previews before export.
 - Avoid running OCR twice just because the user selected Both.
 
-### G. Large-document controls
+### H. Large-document controls
 - Support 300-page jobs through streaming/page-at-a-time or small-batch processing.
 - Bounded worker count and memory-aware bitmap lifecycle.
 - Persist job state and intermediate text so an interrupted job can resume.
@@ -137,6 +151,9 @@ Use existing PDF rendering/storage/OCR components after source audit. Reuse depe
 
 ## 7. Acceptance checklist
 
+- [ ] Capture a single page and export it as PDF.
+- [ ] Capture a multi-page document, reorder/retake/delete pages, and export one PDF.
+- [ ] Request CAMERA permission only on explicit Scan action; confirm import remains usable when denied.
 - [ ] Import scanned PDF and image sets using SAF.
 - [ ] Process selected page ranges and preserve original page order.
 - [ ] Bengali, English, and mixed-language test fixtures.
