@@ -1,25 +1,31 @@
 package com.paperplan.app.feature.home
 
-import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CallSplit
+import androidx.compose.material.icons.outlined.DocumentScanner
+import androidx.compose.material.icons.outlined.Merge
+import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,75 +35,101 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.paperplan.app.BuildConfig
 import com.paperplan.app.R
-import com.paperplan.app.core.pdf.PdfToolkit
+import com.paperplan.app.core.pdf.PdfEngine
+import com.paperplan.app.core.ui.components.GlassWorkspaceCard
+import com.paperplan.app.core.ui.components.StatusBadgePill
+import com.paperplan.app.core.ui.components.formatFileBytes
+import com.paperplan.app.core.ui.theme.PaperInfoText
+import com.paperplan.app.core.ui.theme.PaperMint
 import com.paperplan.app.core.ui.theme.PaperMuted
-import kotlinx.coroutines.Dispatchers
+import com.paperplan.app.core.ui.theme.PaperViolet
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private enum class PdfAction { MERGE, ROTATE, SPLIT }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onOpenRedact: () -> Unit = {},
+    onOpenGpuLab: () -> Unit = {}
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
     var pendingAction by remember { mutableStateOf<PdfAction?>(null) }
     var pendingUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
-    var status by remember { mutableStateOf("Choose a tool to get started.") }
+    var status by remember { mutableStateOf("Ready. Originals stay untouched until SAF write succeeds.") }
     var busy by remember { mutableStateOf(false) }
 
     val savePdf = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { output ->
         val action = pendingAction
-        if (output != null && action != null) {
-            scope.launch {
-                busy = true
-                status = "Processing PDF…"
-                val result = runCatching {
-                    withContext(Dispatchers.IO) {
-                        context.contentResolver.openOutputStream(output)?.use { stream ->
-                            val toolkit = PdfToolkit(context)
-                            when (action) {
-                                PdfAction.MERGE -> toolkit.merge(pendingUris, stream)
-                                PdfAction.ROTATE -> toolkit.rotateAllPages(pendingUris.single(), stream)
-                                PdfAction.SPLIT -> error("Select ZIP output for split.")
-                            }
-                        } ?: error("Could not create the output file.")
-                    }
+        if (output == null) {
+            status = "Save cancelled. Your original files were not modified."
+            pendingAction = null
+            pendingUris = emptyList()
+            return@rememberLauncherForActivityResult
+        }
+        if (action == null || pendingUris.isEmpty()) return@rememberLauncherForActivityResult
+
+        val sources = pendingUris
+        scope.launch {
+            busy = true
+            status = "Processing PDF using disk-backed stream…"
+            val result = runCatching {
+                when (action) {
+                    PdfAction.MERGE -> PdfEngine.merge(context, sources, output)
+                    PdfAction.ROTATE -> PdfEngine.rotateAllPages(context, sources.single(), output)
+                    PdfAction.SPLIT -> error("Select ZIP output for split.")
                 }
-                status = result.fold({ "Done. Your new PDF has been saved." }, { "Failed: ${it.message ?: "Unknown error"}" })
-                busy = false
-                pendingAction = null
-                pendingUris = emptyList()
             }
-        } else if (output == null) {
-            status = "Save cancelled. Your original files were not changed."
+            status = result.fold(
+                onSuccess = { s ->
+                    "Done: ${s.pageCount} page(s) verified (${formatFileBytes(s.outputBytes)})."
+                },
+                onFailure = { err ->
+                    "Failed: ${err.message ?: "Unknown error"}"
+                }
+            )
+            busy = false
+            pendingAction = null
+            pendingUris = emptyList()
         }
     }
 
     val saveZip = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { output ->
-        val action = pendingAction
-        if (output != null && action == PdfAction.SPLIT && pendingUris.isNotEmpty()) {
-            scope.launch {
-                busy = true
-                status = "Splitting pages…"
-                val result = runCatching {
-                    withContext(Dispatchers.IO) {
-                        context.contentResolver.openOutputStream(output)?.use { stream ->
-                            PdfToolkit(context).splitIntoZip(pendingUris.single(), stream)
-                        } ?: error("Could not create the ZIP file.")
-                    }
-                }
-                status = result.fold({ "Done. Each page is saved as a separate PDF in the ZIP." }, { "Failed: ${it.message ?: "Unknown error"}" })
-                busy = false
-                pendingAction = null
-                pendingUris = emptyList()
+        val sources = pendingUris
+        if (output == null) {
+            status = "Save cancelled. Your original file was not modified."
+            pendingAction = null
+            pendingUris = emptyList()
+            return@rememberLauncherForActivityResult
+        }
+        if (pendingAction != PdfAction.SPLIT || sources.isEmpty()) return@rememberLauncherForActivityResult
+
+        scope.launch {
+            busy = true
+            status = "Splitting PDF pages into verified ZIP…"
+            val result = runCatching {
+                PdfEngine.splitIntoZip(context, sources.single(), output)
             }
-        } else if (output == null) {
-            status = "Save cancelled. Your original file was not changed."
+            status = result.fold(
+                onSuccess = { s ->
+                    "Done: ${s.pageCount} page PDFs packed into ZIP (${formatFileBytes(s.outputBytes)})."
+                },
+                onFailure = { err ->
+                    "Failed: ${err.message ?: "Unknown error"}"
+                }
+            )
+            busy = false
+            pendingAction = null
+            pendingUris = emptyList()
         }
     }
 
@@ -127,102 +159,201 @@ fun HomeScreen() {
         }
     }
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item(key = "brand_header") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
                     Image(
                         painter = painterResource(R.drawable.ic_paper_plan_foreground),
-                        contentDescription = "Paper Plan logo",
+                        contentDescription = stringResource(R.string.app_name),
                         modifier = Modifier.size(48.dp)
                     )
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("iPlus presents", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-                        Text("Paper Plan", style = MaterialTheme.typography.headlineLarge)
-                        Text("Make your own PDF better than anyone.", color = PaperMuted)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = stringResource(R.string.brand_name),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = PaperMint
+                        )
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            text = stringResource(R.string.app_brand_line),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PaperMuted
+                        )
                     }
                 }
+                StatusBadgePill(label = "v${BuildConfig.VERSION_NAME}", accent = PaperViolet)
             }
-            item {
-                Card(
+        }
+
+        item(key = "engine_status") {
+            GlassWorkspaceCard(elevated = true) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("PDF Toolkit", style = MaterialTheme.typography.titleLarge)
-                        Text("These tools process files on your device. Originals are kept unchanged.", color = PaperMuted)
-                        Text(status, style = MaterialTheme.typography.bodyMedium)
-                        if (busy) Text("Please keep Paper Plan open until processing finishes.", color = MaterialTheme.colorScheme.secondary)
-                    }
+                    Text("GPU & TempFile PDF Core", style = MaterialTheme.typography.titleMedium)
+                    StatusBadgePill(label = "Phase 0 Spike", accent = PaperMint)
+                }
+                Text(
+                    "Disk-backed TempFile memory mode prevents heap OOM crashes on large PDFs.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PaperMuted
+                )
+                Text(status, style = MaterialTheme.typography.bodyMedium, color = PaperInfoText)
+                if (busy) {
+                    Text(
+                        "Processing on disk… keep Paper Plan in foreground.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PaperMint
+                    )
                 }
             }
-            item { Text("Working tools", style = MaterialTheme.typography.titleLarge) }
-            item {
-                ToolCard(
-                    title = "Merge PDFs",
-                    description = "Combine two or more PDF files into one document.",
-                    enabled = !busy,
-                    action = { pickMany.launch(arrayOf("application/pdf")) },
-                    button = "Select PDFs"
-                )
+        }
+
+        item(key = "quick_labs") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onOpenRedact,
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp)
+                ) {
+                    Icon(Icons.Outlined.Security, contentDescription = null)
+                    Spacer(Modifier.size(6.dp))
+                    Text("True Redact", maxLines = 1)
+                }
+                OutlinedButton(
+                    onClick = onOpenGpuLab,
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp)
+                ) {
+                    Icon(Icons.Outlined.DocumentScanner, contentDescription = null)
+                    Spacer(Modifier.size(6.dp))
+                    Text("GPU & Bangla", maxLines = 1)
+                }
             }
-            item {
-                ToolCard(
-                    title = "Rotate PDF",
-                    description = "Rotate every page 90° clockwise and save a new PDF.",
-                    enabled = !busy,
-                    action = { pickRotate.launch(arrayOf("application/pdf")) },
-                    button = "Choose PDF"
-                )
+        }
+
+        item(key = "section_live_pdf") {
+            Text("Live On-Device PDF Tools", style = MaterialTheme.typography.titleMedium)
+        }
+
+        item(key = "tool_merge") {
+            PdfToolActionCard(
+                icon = Icons.Outlined.Merge,
+                title = "Merge PDFs",
+                description = "Combine 2+ PDFs stream-safely and verify %PDF- / %%EOF before finalizing.",
+                buttonLabel = "Select 2+ PDFs",
+                enabled = !busy,
+                onClick = { pickMany.launch(arrayOf("application/pdf")) }
+            )
+        }
+
+        item(key = "tool_rotate") {
+            PdfToolActionCard(
+                icon = Icons.Outlined.RotateRight,
+                title = "Rotate PDF Pages",
+                description = "Rotate every page 90° clockwise into a fresh file.",
+                buttonLabel = "Choose PDF",
+                enabled = !busy,
+                onClick = { pickRotate.launch(arrayOf("application/pdf")) }
+            )
+        }
+
+        item(key = "tool_split") {
+            PdfToolActionCard(
+                icon = Icons.Outlined.CallSplit,
+                title = "Split to Verified ZIP",
+                description = "Export each page as its own standalone verified PDF inside a ZIP.",
+                buttonLabel = "Choose PDF",
+                enabled = !busy,
+                onClick = { pickSplit.launch(arrayOf("application/pdf")) }
+            )
+        }
+
+        item(key = "section_roadmap") {
+            Text("Phase Roadmap & Status", style = MaterialTheme.typography.titleMedium)
+        }
+
+        items(
+            items = paperPlanTools,
+            key = { it.id }
+        ) { item ->
+            val accent = when (item.status) {
+                ToolStatus.LIVE -> PaperMint
+                ToolStatus.SPIKE_LAB -> PaperViolet
+                ToolStatus.PLANNED -> PaperMuted
             }
-            item {
-                ToolCard(
-                    title = "Split PDF",
-                    description = "Export every page as a separate PDF inside a ZIP file.",
-                    enabled = !busy,
-                    action = { pickSplit.launch(arrayOf("application/pdf")) },
-                    button = "Choose PDF"
-                )
-            }
-            item {
-                Text(
-                    "More tools will appear here only after their processing and export flows are implemented and tested.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PaperMuted,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
+            GlassWorkspaceCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f).padding(end = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(item.title, style = MaterialTheme.typography.titleSmall)
+                        Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = PaperMuted)
+                    }
+                    StatusBadgePill(label = item.status.badgeText, accent = accent)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ToolCard(
+private fun PdfToolActionCard(
+    icon: ImageVector,
     title: String,
     description: String,
+    buttonLabel: String,
     enabled: Boolean,
-    action: () -> Unit,
-    button: String
+    onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
+    GlassWorkspaceCard {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Icon(imageVector = icon, contentDescription = null, tint = PaperViolet, modifier = Modifier.size(24.dp))
             Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(description, style = MaterialTheme.typography.bodySmall, color = PaperMuted)
-            Button(onClick = action, enabled = enabled) { Text(button) }
+        }
+        Text(description, style = MaterialTheme.typography.bodySmall, color = PaperMuted)
+        Button(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 48.dp)
+        ) {
+            Text(buttonLabel)
         }
     }
 }
