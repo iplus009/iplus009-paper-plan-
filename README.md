@@ -1,45 +1,39 @@
-# Paper Plan by iPlus
+# Paper Plane by iPlus
 
 **Make your own PDF better than anyone.**
 
-Paper Plan is an Android PDF workspace from **iPlus**.
+Paper Plane is a GPU-accelerated, privacy-first Android PDF workspace from **iPlus**.
 
-## Working in the current build
+## Working in `v0.1.6` (Phase 0: GPU & Bangla Physics Spike)
 
-The current implementation includes on-device PDF processing:
+- **Merge, Rotate & Split PDFs** — disk-backed `MemoryUsageSetting.setupTempFileOnly()` streaming (`PdfEngine`), `%PDF-`/`%%EOF` integrity check, and atomic SAF `"wt"` writes.
+- **True Pixel-Cut Redact** — flattens redacted regions into opaque black pixels, strips metadata, and verifies `0` remaining extractable characters via `PDFTextStripper`.
+- **OpenGL ES 2.0 Scanner Spike** — offscreen EGL FBO fragment shaders for 4-corner inverse homography warp, bright-biased shadow normalization, grayscale, and adaptive B&W.
+- **Bangla Vector Shaping PDF** — native Android Minikin/HarfBuzz `StaticLayout` ➔ `PdfDocument` rendering (*Original Book Style* & *Clean Text Style*) with `PdfRenderer` preview and text extraction audit.
 
-- **Merge PDFs** — combine two or more selected PDFs into one new PDF.
-- **Rotate PDF** — rotate every page 90° clockwise and save a separate output.
-- **Split PDF** — export each page as an individual PDF inside a ZIP archive.
-
-The source files are opened read-only; operations create a new output file. These tools use PDFBox-Android and Android's Storage Access Framework.
-
-> The app is actively under development. Features listed in the roadmap are not available until their processing, export and tests are integrated. The current build is an early functional PDF-tools milestone, not the complete planned product.
+The source files are opened read-only; operations create a new output file. Planned Milestone 1–6 modules (CameraX GPU Live Viewfinder, Visual Page Organizer, Smart Compressor, Offline `tessdata_fast` Bangla/English OCR, Offline Translation) are tracked under active development.
 
 ## App identity
 
 | Item | Value |
 |---|---|
-| Product | Paper Plan |
+| Product | Paper Plane |
 | Publisher | iPlus |
-| Brand line | Paper Plan by iPlus |
+| Brand line | Paper Plane by iPlus |
 | Platform | Android |
 | Application ID | `com.paperplan.app` |
 | Minimum Android | Android 8.0 (API 26) |
-| Technology | Kotlin, Jetpack Compose, PDFBox-Android |
+| Technology | Kotlin, Jetpack Compose, OpenGL ES 2.0, PDFBox-Android |
 
 ## Planned product areas
 
-- PDF toolkit: organize, compress, annotate, protect, redact, forms and metadata.
-- Camera scanner: multi-page capture, edge detection, crop and scan filters.
-- OCR Studio: Bengali/English OCR, searchable PDF, book-style and clean-text exports.
-- Online PDF translation.
-- Canva-style PDF Designer with templates, layers, brand kit and QR/barcode elements.
-- Conversion, history and file management.
+- **Milestone 1:** Visual Page Grid (drag-reorder, rotate, delete), PDF Viewer + E-Sign + Highlight + Real Compress.
+- **Milestone 2:** CameraX + OpenGL ES live edge scanner & multi-page batch PDF export.
+- **Milestone 3:** Offline Bangla & English OCR (`tessdata_fast` + XY-Cut column sorting) + Book Reader & Offline Translation.
 
 ## Build
 
-Open [GitHub Actions](https://github.com/iplus009/iplus009-paper-plan-/actions), select a successful **Android Debug Build**, and download the `paper-plan-debug-apk` artifact.
+Open [GitHub Actions](https://github.com/iplus009/iplus009-paper-plan-/actions), select a successful **Android Debug Build**, and download the `PaperPlane-v0.1.6-debug-apk` artifact.
 
 ## Source projects and licensing
 

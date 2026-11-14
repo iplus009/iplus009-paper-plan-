@@ -28,12 +28,45 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
+      - name: Run unit tests
+        run: gradle --no-daemon testDebugUnitTest
+
+      - name: Annotate unit test results
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for path in sorted(glob.glob("app/build/test-results/testDebugUnitTest/*.xml")):
+              root = ET.parse(path).getroot()
+              t = root.attrib.get("tests")
+              f = root.attrib.get("failures")
+              e = root.attrib.get("errors")
+              s = root.attrib.get("skipped")
+              print(f"::notice title={path}::tests={t} failures={f} errors={e} skipped={s}")
+              for tc in root.findall("testcase"):
+                  for tag in ("failure", "error"):
+                      el = tc.find(tag)
+                      if el is not None:
+                          cls = tc.attrib.get("classname", "")
+                          name = tc.attrib.get("name", "")
+                          msg = (el.attrib.get("message") or el.text or "").replace("\n", " ")[:400]
+                          print(f"::error title={cls}.{name}::{msg}")
+          PY
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-plan-unit-test-reports
+          path: app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: paper-plan-debug-apk
+          name: PaperPlane-v0.1.6-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error

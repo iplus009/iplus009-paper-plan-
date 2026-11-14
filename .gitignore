@@ -1,0 +1,26 @@
+# Gradle & Android build artifacts
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Signing & secrets
+*.jks
+*.keystore
+keystore.properties
+
+# Scratch & SDD plan workspaces
+.superpowers/
+captures/
+.DS_Store
+Thumbs.db
