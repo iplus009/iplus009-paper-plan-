@@ -10,6 +10,8 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import com.paperplan.app.core.storage.SafSafeWriter
 import com.paperplan.app.core.storage.TempWorkspaceManager
+import com.paperplan.app.core.storage.WorkspaceDoc
+import com.paperplan.app.core.storage.WorkspaceLibrary
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
@@ -106,6 +108,36 @@ object TruePdfRedactor {
         }
     }
 
+    suspend fun redactToWorkspaceAndVerify(
+        context: Context,
+        inputUri: Uri,
+        regions: List<NormalizedRedactionRect>,
+        stripMetadata: Boolean = true,
+        displayName: String = "PaperPlane-Redacted.pdf"
+    ): Pair<WorkspaceDoc, RedactionAuditSummary> = withContext(Dispatchers.IO) {
+        val validRegions = regions.map { it.clamped() }.filter { it.isValid() }
+        require(validRegions.isNotEmpty()) { "Select at least one valid redaction area." }
+        val byPage = validRegions.groupBy { it.pageIndex }
+
+        PdfEngine.pdfMutex.withLock {
+            TempWorkspaceManager.useTempDir(context.cacheDir, "redact_ws") { workDir ->
+                val srcFile = File(workDir, "source.pdf")
+                val stagedOut = File(workDir, "redacted.pdf")
+                SafSafeWriter.copyUriToTempFile(context, inputUri, srcFile)
+
+                val audit = executeRedactionPipeline(workDir, srcFile, stagedOut, byPage, stripMetadata)
+                val savedDoc = WorkspaceLibrary.saveStagedPdf(
+                    context = context,
+                    stagedPdf = stagedOut,
+                    displayName = displayName,
+                    tag = "Redacted",
+                    pageCount = audit.totalPages
+                )
+                Pair(savedDoc, audit.copy(outputBytes = savedDoc.sizeBytes))
+            }
+        }
+    }
+
     suspend fun redactAndVerify(
         context: Context,
         inputUri: Uri,
@@ -125,98 +157,109 @@ object TruePdfRedactor {
                 val stagedOut = File(workDir, "redacted.pdf")
                 SafSafeWriter.copyUriToTempFile(context, inputUri, srcFile)
 
-                val mem = MemoryUsageSetting.setupTempFileOnly().setTempDir(workDir)
-                var totalPages = 0
-                val redactedIndices = mutableSetOf<Int>()
-
-                ParcelFileDescriptor.open(srcFile, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
-                    PdfRenderer(pfd).use { renderer ->
-                        PDDocument.load(srcFile, mem).use { srcDoc ->
-                            PDDocument(mem).use { destDoc ->
-                                totalPages = srcDoc.numberOfPages
-                                require(totalPages > 0) { "Source PDF has no pages." }
-
-                                val maskPaint = Paint().apply {
-                                    color = Color.BLACK
-                                    style = Paint.Style.FILL
-                                }
-
-                                for (pageIdx in 0 until totalPages) {
-                                    val boxes = byPage[pageIdx]
-                                    if (boxes.isNullOrEmpty()) {
-                                        destDoc.importPage(srcDoc.getPage(pageIdx))
-                                    } else {
-                                        redactedIndices.add(pageIdx)
-                                        val rendered = renderPageForRedaction(renderer, pageIdx, maxDim = 2200)
-                                        try {
-                                            val canvas = Canvas(rendered)
-                                            for (box in boxes) {
-                                                canvas.drawRect(
-                                                    box.leftFraction * rendered.width,
-                                                    box.topFraction * rendered.height,
-                                                    box.rightFraction * rendered.width,
-                                                    box.bottomFraction * rendered.height,
-                                                    maskPaint
-                                                )
-                                            }
-                                            val aspect = rendered.height.toFloat() / rendered.width.toFloat().coerceAtLeast(1f)
-                                            val refBox = srcDoc.getPage(pageIdx).cropBox
-                                            val visualW = if ((srcDoc.getPage(pageIdx).rotation % 180) != 0) refBox.height else refBox.width
-                                            val outBox = PDRectangle(visualW, visualW * aspect)
-                                            val cleanPage = PDPage(outBox)
-                                            destDoc.addPage(cleanPage)
-
-                                            val img = JPEGFactory.createFromImage(destDoc, rendered, 0.92f)
-                                            PDPageContentStream(destDoc, cleanPage).use { cs ->
-                                                cs.drawImage(img, 0f, 0f, outBox.width, outBox.height)
-                                            }
-                                        } finally {
-                                            rendered.recycle()
-                                        }
-                                    }
-                                }
-
-                                if (stripMetadata) {
-                                    val info = destDoc.documentInformation
-                                    info.author = null
-                                    info.title = null
-                                    info.subject = null
-                                    info.keywords = null
-                                    info.creator = "Paper Plane"
-                                    info.producer = "Paper Plane Safe Redactor"
-                                }
-                                destDoc.save(stagedOut)
-                            }
-                        }
-                    }
-                }
-
-                // Mandatory post-save text extraction verification against the staged artifact
-                var redactedChars = 0
-                var unredactedChars = 0
-                PDDocument.load(stagedOut, mem).use { verifyDoc ->
-                    val stripper = PDFTextStripper()
-                    for (idx in 0 until verifyDoc.numberOfPages) {
-                        stripper.startPage = idx + 1
-                        stripper.endPage = idx + 1
-                        val textLen = stripper.getText(verifyDoc).trim().length
-                        if (idx in redactedIndices) redactedChars += textLen else unredactedChars += textLen
-                    }
-                }
-                check(redactedChars == 0) {
-                    "Redaction verification failed: $redactedChars extractable characters remained on redacted page."
-                }
-
+                val summary = executeRedactionPipeline(workDir, srcFile, stagedOut, byPage, stripMetadata)
                 val outBytes = SafSafeWriter.writeTempPdfToUri(context, stagedOut, outputUri, inputUri)
-                RedactionAuditSummary(
-                    totalPages = totalPages,
-                    redactedPageCount = redactedIndices.size,
-                    redactedPagesRemainingTextChars = redactedChars,
-                    unredactedPagesRemainingTextChars = unredactedChars,
-                    outputBytes = outBytes
-                )
+                summary.copy(outputBytes = outBytes)
             }
         }
+    }
+
+    private fun executeRedactionPipeline(
+        workDir: File,
+        srcFile: File,
+        stagedOut: File,
+        byPage: Map<Int, List<NormalizedRedactionRect>>,
+        stripMetadata: Boolean
+    ): RedactionAuditSummary {
+        val mem = MemoryUsageSetting.setupTempFileOnly().setTempDir(workDir)
+        var totalPages = 0
+        val redactedIndices = mutableSetOf<Int>()
+
+        ParcelFileDescriptor.open(srcFile, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+            PdfRenderer(pfd).use { renderer ->
+                PDDocument.load(srcFile, mem).use { srcDoc ->
+                    PDDocument(mem).use { destDoc ->
+                        totalPages = srcDoc.numberOfPages
+                        require(totalPages > 0) { "Source PDF has no pages." }
+
+                        val maskPaint = Paint().apply {
+                            color = Color.BLACK
+                            style = Paint.Style.FILL
+                        }
+
+                        for (pageIdx in 0 until totalPages) {
+                            val boxes = byPage[pageIdx]
+                            if (boxes.isNullOrEmpty()) {
+                                destDoc.importPage(srcDoc.getPage(pageIdx))
+                            } else {
+                                redactedIndices.add(pageIdx)
+                                val rendered = renderPageForRedaction(renderer, pageIdx, maxDim = 2200)
+                                try {
+                                    val canvas = Canvas(rendered)
+                                    for (box in boxes) {
+                                        canvas.drawRect(
+                                            box.leftFraction * rendered.width,
+                                            box.topFraction * rendered.height,
+                                            box.rightFraction * rendered.width,
+                                            box.bottomFraction * rendered.height,
+                                            maskPaint
+                                        )
+                                    }
+                                    val aspect = rendered.height.toFloat() / rendered.width.toFloat().coerceAtLeast(1f)
+                                    val refBox = srcDoc.getPage(pageIdx).cropBox
+                                    val visualW = if ((srcDoc.getPage(pageIdx).rotation % 180) != 0) refBox.height else refBox.width
+                                    val outBox = PDRectangle(visualW, visualW * aspect)
+                                    val cleanPage = PDPage(outBox)
+                                    destDoc.addPage(cleanPage)
+
+                                    val img = JPEGFactory.createFromImage(destDoc, rendered, 0.92f)
+                                    PDPageContentStream(destDoc, cleanPage).use { cs ->
+                                        cs.drawImage(img, 0f, 0f, outBox.width, outBox.height)
+                                    }
+                                } finally {
+                                    rendered.recycle()
+                                }
+                            }
+                        }
+
+                        if (stripMetadata) {
+                            val info = destDoc.documentInformation
+                            info.author = null
+                            info.title = null
+                            info.subject = null
+                            info.keywords = null
+                            info.creator = "Paper Plane"
+                            info.producer = "Paper Plane Safe Redactor"
+                        }
+                        destDoc.save(stagedOut)
+                    }
+                }
+            }
+        }
+
+        // Mandatory post-save text extraction verification against the staged artifact
+        var redactedChars = 0
+        var unredactedChars = 0
+        PDDocument.load(stagedOut, mem).use { verifyDoc ->
+            val stripper = PDFTextStripper()
+            for (idx in 0 until verifyDoc.numberOfPages) {
+                stripper.startPage = idx + 1
+                stripper.endPage = idx + 1
+                val textLen = stripper.getText(verifyDoc).trim().length
+                if (idx in redactedIndices) redactedChars += textLen else unredactedChars += textLen
+            }
+        }
+        check(redactedChars == 0) {
+            "Redaction verification failed: $redactedChars extractable characters remained on redacted page."
+        }
+
+        return RedactionAuditSummary(
+            totalPages = totalPages,
+            redactedPageCount = redactedIndices.size,
+            redactedPagesRemainingTextChars = redactedChars,
+            unredactedPagesRemainingTextChars = unredactedChars,
+            outputBytes = stagedOut.length()
+        )
     }
 
     private fun renderPageForRedaction(

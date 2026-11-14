@@ -1,82 +1,92 @@
 package com.paperplan.app.feature.home
 
-enum class ToolCategory(val label: String) {
-    PDF("PDF Core"),
-    SECURITY("Privacy & Security"),
-    SCAN("GPU Scanner"),
-    BANGALI("Bangla Studio"),
-    OCR("OCR & Translation")
+import androidx.compose.ui.graphics.Color
+import com.paperplan.app.core.ui.theme.PaperMint
+import com.paperplan.app.core.ui.theme.PaperScanBlue
+import com.paperplan.app.core.ui.theme.PaperViolet
+
+enum class HomeToolAction {
+    SCAN,
+    VIEWER,
+    ORGANIZE,
+    COMPRESS,
+    MERGE,
+    ROTATE,
+    SPLIT,
+    REDACT,
+    BANGLA
 }
 
-enum class ToolStatus(val badgeText: String) {
-    LIVE("Live"),
-    SPIKE_LAB("Phase 0 Lab"),
-    PLANNED("Planned")
-}
-
-data class ToolItem(
-    val id: String,
+data class HomeActionTool(
+    val action: HomeToolAction,
     val title: String,
     val subtitle: String,
-    val category: ToolCategory,
-    val status: ToolStatus
+    val badge: String,
+    val accent: Color
 )
 
-val paperPlanTools = listOf(
-    ToolItem(
-        id = "merge",
-        title = "Merge PDFs",
-        subtitle = "Combine 2+ PDFs stream-safely via TempFile storage (no OOM).",
-        category = ToolCategory.PDF,
-        status = ToolStatus.LIVE
+val livePaperPlaneTools: List<HomeActionTool> = listOf(
+    HomeActionTool(
+        action = HomeToolAction.SCAN,
+        title = "GPU Camera Scan",
+        subtitle = "CameraX + gallery quad warp with 4 OpenGL ES 2.0 filters & multi-page PDF.",
+        badge = "GPU Live",
+        accent = PaperScanBlue
     ),
-    ToolItem(
-        id = "rotate",
-        title = "Rotate PDF",
-        subtitle = "Rotate all pages 90° clockwise and save via atomic SAF check.",
-        category = ToolCategory.PDF,
-        status = ToolStatus.LIVE
+    HomeActionTool(
+        action = HomeToolAction.VIEWER,
+        title = "PDF Viewer",
+        subtitle = "Open any PDF with pinch-to-zoom, share, SAF export & quick tool links.",
+        badge = "Live",
+        accent = PaperViolet
     ),
-    ToolItem(
-        id = "split",
+    HomeActionTool(
+        action = HomeToolAction.ORGANIZE,
+        title = "Organize Pages",
+        subtitle = "Reorder pages, rotate +90° per slot, remove pages & export clean PDF.",
+        badge = "Live",
+        accent = PaperMint
+    ),
+    HomeActionTool(
+        action = HomeToolAction.COMPRESS,
+        title = "Compress PDF",
+        subtitle = "Small / Balanced / Print presets with size-reduction verification.",
+        badge = "Live",
+        accent = PaperScanBlue
+    ),
+    HomeActionTool(
+        action = HomeToolAction.MERGE,
+        title = "Merge 2+ PDFs",
+        subtitle = "Combine multiple device PDFs seamlessly into your Workspace library.",
+        badge = "Live",
+        accent = PaperViolet
+    ),
+    HomeActionTool(
+        action = HomeToolAction.ROTATE,
+        title = "Rotate PDF +90°",
+        subtitle = "Rotate every page clockwise cleanly into a new Workspace PDF.",
+        badge = "Live",
+        accent = PaperMint
+    ),
+    HomeActionTool(
+        action = HomeToolAction.SPLIT,
         title = "Split to ZIP",
-        subtitle = "Export each page as its own verified PDF inside a ZIP archive.",
-        category = ToolCategory.PDF,
-        status = ToolStatus.LIVE
+        subtitle = "Extract each page of a PDF into individual PDFs inside a ZIP archive.",
+        badge = "Live",
+        accent = PaperScanBlue
     ),
-    ToolItem(
-        id = "true_redact",
+    HomeActionTool(
+        action = HomeToolAction.REDACT,
         title = "True Pixel-Cut Redact",
-        subtitle = "Destroy underlying text/metadata in masked zones + post-save audit.",
-        category = ToolCategory.SECURITY,
-        status = ToolStatus.LIVE
+        subtitle = "Rasterize & permanently burn selected boxes with zero text leak audit.",
+        badge = "Security",
+        accent = Color(0xFFEF4444)
     ),
-    ToolItem(
-        id = "gpu_scan",
-        title = "GPU ES 2.0 Scanner",
-        subtitle = "Perspective homography warp, shadow clean & adaptive B&W on GPU.",
-        category = ToolCategory.SCAN,
-        status = ToolStatus.SPIKE_LAB
-    ),
-    ToolItem(
-        id = "bangla_pdf",
-        title = "Bangla Vector PDF",
-        subtitle = "Native HarfBuzz conjunct shaping: Book Style & Clean Text Style.",
-        category = ToolCategory.BANGALI,
-        status = ToolStatus.SPIKE_LAB
-    ),
-    ToolItem(
-        id = "ocr_translate",
-        title = "Offline Bangla/EN OCR + Translate",
-        subtitle = "XY-Cut column sort, Tesseract fast + ML Kit offline (Milestone 2–3).",
-        category = ToolCategory.OCR,
-        status = ToolStatus.PLANNED
-    ),
-    ToolItem(
-        id = "batch_sign",
-        title = "Reorder, Compress & Sign",
-        subtitle = "Visual page drag-sort, smart compression & signatures (Milestone 1).",
-        category = ToolCategory.PDF,
-        status = ToolStatus.PLANNED
+    HomeActionTool(
+        action = HomeToolAction.BANGLA,
+        title = "Bangla Vector Studio",
+        subtitle = "HarfBuzz-shaped Unicode Bengali PDF with 100% searchable vector glyphs.",
+        badge = "Vector",
+        accent = PaperMint
     )
 )
