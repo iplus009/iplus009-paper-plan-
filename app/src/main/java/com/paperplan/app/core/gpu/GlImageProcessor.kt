@@ -49,6 +49,11 @@ object GlImageProcessor {
     ): GpuProcessResult = withContext(Dispatchers.Default) {
         val startMs = SystemClock.elapsedRealtime()
         val invH = HomographySolver.solveInverseHomography(corners)
+        val uploadBitmap = if (source.config != Bitmap.Config.ARGB_8888) {
+            source.copy(Bitmap.Config.ARGB_8888, false)
+        } else {
+            source
+        }
 
         var display: EGLDisplay = EGL14.EGL_NO_DISPLAY
         var context: EGLContext = EGL14.EGL_NO_CONTEXT
@@ -112,7 +117,10 @@ object GlImageProcessor {
 
             // Upload source bitmap once to GPU texture
             val srcTex = createTexture(allocatedTextures)
-            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, source, 0)
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, uploadBitmap, 0)
+            if (uploadBitmap !== source) {
+                uploadBitmap.recycle()
+            }
 
             // Pass 1: Perspective warp into FBO
             val (warpFbo, warpTex) = createRenderTarget(dstW, dstH, allocatedFbos, allocatedTextures)
