@@ -182,8 +182,8 @@ object TruePdfRedactor {
                                     info.title = null
                                     info.subject = null
                                     info.keywords = null
-                                    info.creator = "Paper Plan"
-                                    info.producer = "Paper Plan Safe Redactor"
+                                    info.creator = "Paper Plane"
+                                    info.producer = "Paper Plane Safe Redactor"
                                 }
                                 destDoc.save(stagedOut)
                             }

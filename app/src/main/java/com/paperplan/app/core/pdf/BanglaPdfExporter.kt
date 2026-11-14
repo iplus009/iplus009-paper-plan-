@@ -46,7 +46,7 @@ data class CanonicalTextDocument(
                         DocumentBlock(BlockRole.BODY, line)
                     }
                 }
-            return CanonicalTextDocument(title = title.ifBlank { "Paper Plan Document" }, blocks = blocks)
+            return CanonicalTextDocument(title = title.ifBlank { "Paper Plane Document" }, blocks = blocks)
         }
     }
 }
@@ -225,6 +225,6 @@ object BanglaPdfExporter {
         chromePaint: Paint
     ) {
         chromePaint.textAlign = Paint.Align.CENTER
-        canvas.drawText("পৃষ্ঠা $pageNumber • Paper Plan by iPlus", pageWidth / 2f, (pageHeight - 24).toFloat(), chromePaint)
+        canvas.drawText("পৃষ্ঠা $pageNumber • Paper Plane by iPlus", pageWidth / 2f, (pageHeight - 24).toFloat(), chromePaint)
     }
 }

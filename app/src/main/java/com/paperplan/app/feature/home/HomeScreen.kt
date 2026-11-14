@@ -137,7 +137,7 @@ fun HomeScreen(
         if (uris.size >= 2) {
             pendingUris = uris
             pendingAction = PdfAction.MERGE
-            savePdf.launch("PaperPlan-Merged.pdf")
+            savePdf.launch("PaperPlane-Merged.pdf")
         } else {
             status = "Select at least two PDF files to merge."
         }
@@ -147,7 +147,7 @@ fun HomeScreen(
         if (uri != null) {
             pendingUris = listOf(uri)
             pendingAction = PdfAction.ROTATE
-            savePdf.launch("PaperPlan-Rotated.pdf")
+            savePdf.launch("PaperPlane-Rotated.pdf")
         }
     }
 
@@ -155,7 +155,7 @@ fun HomeScreen(
         if (uri != null) {
             pendingUris = listOf(uri)
             pendingAction = PdfAction.SPLIT
-            saveZip.launch("PaperPlan-Split-Pages.zip")
+            saveZip.launch("PaperPlane-Split-Pages.zip")
         }
     }
 
@@ -179,9 +179,9 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.ic_paper_plan_foreground),
+                        painter = painterResource(R.drawable.ic_paper_plane_logo),
                         contentDescription = stringResource(R.string.app_name),
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(52.dp)
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
@@ -222,7 +222,7 @@ fun HomeScreen(
                 Text(status, style = MaterialTheme.typography.bodyMedium, color = PaperInfoText)
                 if (busy) {
                     Text(
-                        "Processing on disk… keep Paper Plan in foreground.",
+                        "Processing on disk… keep Paper Plane in foreground.",
                         style = MaterialTheme.typography.bodySmall,
                         color = PaperMint
                     )

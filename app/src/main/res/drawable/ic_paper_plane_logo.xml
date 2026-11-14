@@ -1,0 +1,68 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Deep navy rounded squircle background -->
+    <path
+        android:fillColor="#FF0B003A"
+        android:pathData="M24,4 L84,4 Q104,4 104,24 L104,84 Q104,104 84,104 L24,104 Q4,104 4,84 L4,24 Q4,4 24,4 Z" />
+
+    <!-- Scaled Paper Plane emblem centered inside squircle -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.28"
+        android:scaleY="1.28">
+
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M42.5,32.5 L63.8,32.5 A15.0,15.0 0 0,1 66.5,62.3 L66.5,53.4 L63.8,53.4 A6.2,6.2 0 0,0 63.8,41.0 L42.5,41.0 Z" />
+
+        <path
+            android:pathData="M42.5,43.5 Q42.5,42.0 44.0,42.0 L51.0,42.0 Q52.5,42.0 52.5,43.5 L52.5,53.5 L63.0,53.5 Q64.5,53.5 64.5,55.0 L64.5,62.0 Q64.5,63.5 63.0,63.5 L52.5,63.5 L52.5,73.5 Q52.5,75.0 51.0,75.0 L44.0,75.0 Q42.5,75.0 42.5,73.5 L42.5,63.5 L31.0,63.5 Q29.5,63.5 29.5,62.0 L29.5,55.0 Q29.5,53.5 31.0,53.5 L42.5,53.5 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:endX="64.5"
+                    android:endY="51.0"
+                    android:startX="29.5"
+                    android:startY="64.0"
+                    android:type="linear">
+                    <item
+                        android:color="#FF5A7EFF"
+                        android:offset="0.0" />
+                    <item
+                        android:color="#FFD45CF2"
+                        android:offset="0.42" />
+                    <item
+                        android:color="#FFF67AAC"
+                        android:offset="0.72" />
+                    <item
+                        android:color="#FFFFCC5C"
+                        android:offset="1.0" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <path
+            android:pathData="M54.0,45.1 L57.1,45.1 M53.5,47.3 L57.5,47.3 M54.3,49.5 L57.1,49.5"
+            android:strokeColor="#FFFF7A3D"
+            android:strokeLineCap="round"
+            android:strokeWidth="1.05" />
+
+        <path
+            android:fillColor="#2EFF7A3D"
+            android:pathData="M57.0,43.0 L68.4,47.3 L57.6,51.6 L59.3,48.1 L59.1,46.6 Z"
+            android:strokeColor="#FFFF7A3D"
+            android:strokeLineJoin="round"
+            android:strokeWidth="1.25" />
+
+        <path
+            android:pathData="M59.2,47.3 L67.8,47.3"
+            android:strokeColor="#FFFF944D"
+            android:strokeLineCap="round"
+            android:strokeWidth="0.95" />
+    </group>
+</vector>

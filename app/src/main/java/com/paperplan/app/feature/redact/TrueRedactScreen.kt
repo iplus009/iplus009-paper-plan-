@@ -362,7 +362,7 @@ fun TrueRedactScreen(
                     }
 
                     Button(
-                        onClick = { saveRedactedPdf.launch("PaperPlan-Redacted.pdf") },
+                        onClick = { saveRedactedPdf.launch("PaperPlane-Redacted.pdf") },
                         enabled = !busy,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PaperDanger,

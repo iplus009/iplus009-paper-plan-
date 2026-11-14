@@ -83,12 +83,12 @@ import kotlinx.coroutines.launch
 import kotlin.math.hypot
 import kotlin.math.min
 
-private const val DEFAULT_BANGLA_TEST_TEXT = """# সঞ্চয়িকা • যুক্তাক্ষর ও বিন্যাস পরীক্ষা
+private const val DEFAULT_BANGLA_TEST_TEXT = """# Paper Plane • যুক্তাক্ষর ও বিন্যাস পরীক্ষা
 
 বাংলা ভাষার যুক্তবর্ণ যেমন ক্ষ, জ্ঞ, ত্ত, ষ্ণ, ন্ত্র, হ্ম, স্ম, ক্ত এবং ব্ধ সঠিকভাবে ভাঙন ছাড়াই রেন্ডার হচ্ছে কি না তা এই স্পাইক দিয়ে যাচাই করা হয়।
 
 ১. অফিসিয়াল দলিল ও বইয়ের মতো মার্জিন, হেডার এবং পৃষ্ঠা নম্বর অক্ষুণ্ণ রাখা যায়।
-২. Mixed script: Paper Plan GPU Shader 2026 & ভেক্টর পিডিএফ আউটপুট পরীক্ষা।"""
+২. Mixed script: Paper Plane GPU Shader 2026 & ভেক্টর পিডিএফ আউটপুট পরীক্ষা।"""
 
 @Composable
 fun GpuBanglaLabScreen(
@@ -108,7 +108,7 @@ fun GpuBanglaLabScreen(
     var gpuBusy by remember { mutableStateOf(false) }
 
     // --- Bangla Vector PDF State ---
-    var docTitle by remember { mutableStateOf("Paper Plan • বাংলা ও যুক্তাক্ষর স্পাইক") }
+    var docTitle by remember { mutableStateOf("Paper Plane • বাংলা ও যুক্তাক্ষর স্পাইক") }
     var docMarkdown by remember { mutableStateOf(DEFAULT_BANGLA_TEST_TEXT) }
     var exportStyle by remember { mutableStateOf(BanglaExportStyle.BOOK_STYLE) }
     var banglaResult by remember { mutableStateOf<BanglaExportAuditResult?>(null) }
@@ -361,7 +361,7 @@ fun GpuBanglaLabScreen(
                         contentDescription = "GPU processed scan preview"
                     )
                     OutlinedButton(
-                        onClick = { saveGpuPdf.launch("PaperPlan-GPU-Scan.pdf") },
+                        onClick = { saveGpuPdf.launch("PaperPlane-GPU-Scan.pdf") },
                         enabled = !gpuBusy,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -437,7 +437,7 @@ fun GpuBanglaLabScreen(
                 }
 
                 Button(
-                    onClick = { exportBanglaPdf.launch("PaperPlan-Bangla-Shaped.pdf") },
+                    onClick = { exportBanglaPdf.launch("PaperPlane-Bangla-Shaped.pdf") },
                     enabled = !banglaBusy && docMarkdown.isNotBlank(),
                     modifier = Modifier
                         .fillMaxWidth()
