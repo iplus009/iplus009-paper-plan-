@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -62,8 +63,12 @@ import com.paperplan.app.core.pdf.NormalizedRedactionRect
 import com.paperplan.app.core.pdf.PdfPreviewPage
 import com.paperplan.app.core.pdf.RedactionAuditSummary
 import com.paperplan.app.core.pdf.TruePdfRedactor
+import com.paperplan.app.core.storage.WorkspaceDoc
+import com.paperplan.app.core.storage.WorkspaceLibrary
 import com.paperplan.app.core.ui.components.GlassWorkspaceCard
 import com.paperplan.app.core.ui.components.StatusBadgePill
+import com.paperplan.app.core.ui.components.WorkspaceDocActionBar
+import com.paperplan.app.core.ui.components.WorkspaceDocSelectorStrip
 import com.paperplan.app.core.ui.components.formatFileBytes
 import com.paperplan.app.core.ui.theme.PaperDanger
 import com.paperplan.app.core.ui.theme.PaperDangerSoft
@@ -76,11 +81,16 @@ import kotlin.math.min
 
 @Composable
 fun TrueRedactScreen(
+    initialDoc: WorkspaceDoc? = null,
+    workspaceDocs: List<WorkspaceDoc> = emptyList(),
+    onOpenViewer: (WorkspaceDoc) -> Unit = {},
+    onWorkspaceChanged: () -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    var selectedDocId by remember(initialDoc?.id) { mutableStateOf(initialDoc?.id) }
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
     var previewPage by remember { mutableStateOf<PdfPreviewPage?>(null) }
     var currentPageIndex by remember { mutableIntStateOf(0) }
@@ -98,6 +108,7 @@ fun TrueRedactScreen(
         mutableStateOf("Pick any PDF to preview pages, drag over sensitive zones, and burn pixels.")
     }
     var lastAudit by remember { mutableStateOf<RedactionAuditSummary?>(null) }
+    var redactedDoc by remember { mutableStateOf<WorkspaceDoc?>(null) }
 
     fun loadPage(uri: Uri, targetPage: Int) {
         scope.launch {
@@ -120,27 +131,55 @@ fun TrueRedactScreen(
         }
     }
 
+    LaunchedEffect(initialDoc?.id) {
+        val doc = initialDoc ?: return@LaunchedEffect
+        selectedDocId = doc.id
+        val uri = Uri.fromFile(WorkspaceLibrary.getDocFile(context, doc))
+        selectedUri = uri
+        queuedRegions = emptyList()
+        lastAudit = null
+        redactedDoc = null
+        currentPageIndex = 0
+        loadPage(uri, 0)
+    }
+
     val pickPdf = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            selectedUri = uri
-            queuedRegions = emptyList()
-            lastAudit = null
-            currentPageIndex = 0
-            loadPage(uri, 0)
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            busy = true
+            statusText = "Importing PDF into Workspace…"
+            runCatching {
+                WorkspaceLibrary.importFromUri(
+                    context = context,
+                    sourceUri = uri,
+                    displayName = "RedactSrc-${System.currentTimeMillis() % 10000}.pdf",
+                    tag = "Imported"
+                )
+            }.fold(
+                onSuccess = { imported ->
+                    onWorkspaceChanged()
+                    selectedDocId = imported.id
+                    val docUri = Uri.fromFile(WorkspaceLibrary.getDocFile(context, imported))
+                    selectedUri = docUri
+                    queuedRegions = emptyList()
+                    lastAudit = null
+                    redactedDoc = null
+                    currentPageIndex = 0
+                    loadPage(docUri, 0)
+                },
+                onFailure = { err ->
+                    busy = false
+                    statusText = "Import failed: ${err.message ?: "Invalid PDF"}"
+                }
+            )
         }
     }
 
-    val saveRedactedPdf = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/pdf")
-    ) { outputUri ->
+    fun burnRedactionToWorkspace() {
         val srcUri = selectedUri
-        if (outputUri == null) {
-            statusText = "Save cancelled. Source PDF was not modified."
-            return@rememberLauncherForActivityResult
-        }
         if (srcUri == null) {
             statusText = "Pick a source PDF first."
-            return@rememberLauncherForActivityResult
+            return
         }
 
         val currentDraft = NormalizedRedactionRect(
@@ -154,25 +193,28 @@ fun TrueRedactScreen(
         val allRegions = (queuedRegions + currentDraft).filter { it.isValid() }
         if (allRegions.isEmpty()) {
             statusText = "Draw or add at least one valid redaction area."
-            return@rememberLauncherForActivityResult
+            return
         }
 
         scope.launch {
             busy = true
             lastAudit = null
+            redactedDoc = null
             statusText = "Burning redaction mask pixels & auditing text layer…"
             val result = runCatching {
-                TruePdfRedactor.redactAndVerify(
+                TruePdfRedactor.redactToWorkspaceAndVerify(
                     context = context,
                     inputUri = srcUri,
-                    outputUri = outputUri,
                     regions = allRegions,
-                    stripMetadata = stripMetadata
+                    stripMetadata = stripMetadata,
+                    displayName = "PaperPlane-Redacted-${System.currentTimeMillis() % 10000}.pdf"
                 )
             }
             result.fold(
-                onSuccess = { summary ->
+                onSuccess = { (doc, summary) ->
+                    redactedDoc = doc
                     lastAudit = summary
+                    onWorkspaceChanged()
                     statusText = "True redaction verified: 0 extractable chars on masked pages."
                 },
                 onFailure = { err ->
@@ -201,6 +243,9 @@ fun TrueRedactScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -220,17 +265,23 @@ fun TrueRedactScreen(
 
                 Text(statusText, style = MaterialTheme.typography.bodyMedium, color = PaperInfoText)
 
-                Button(
-                    onClick = { pickPdf.launch(arrayOf("application/pdf")) },
-                    enabled = !busy,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 48.dp)
-                ) {
-                    Icon(Icons.Outlined.PictureAsPdf, contentDescription = null)
-                    Spacer(Modifier.size(8.dp))
-                    Text(if (selectedUri == null) "Select PDF to Redact" else "Change Source PDF")
-                }
+                WorkspaceDocSelectorStrip(
+                    docs = workspaceDocs,
+                    selectedDocId = selectedDocId,
+                    busy = busy,
+                    onSelectDoc = { doc ->
+                        selectedDocId = doc.id
+                        val docUri = Uri.fromFile(WorkspaceLibrary.getDocFile(context, doc))
+                        selectedUri = docUri
+                        queuedRegions = emptyList()
+                        lastAudit = null
+                        redactedDoc = null
+                        currentPageIndex = 0
+                        loadPage(docUri, 0)
+                    },
+                    onPickFromDevice = { pickPdf.launch(arrayOf("application/pdf")) },
+                    onWorkspaceChanged = onWorkspaceChanged
+                )
             }
         }
 
@@ -362,7 +413,7 @@ fun TrueRedactScreen(
                     }
 
                     Button(
-                        onClick = { saveRedactedPdf.launch("PaperPlane-Redacted.pdf") },
+                        onClick = { burnRedactionToWorkspace() },
                         enabled = !busy,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PaperDanger,
@@ -381,6 +432,7 @@ fun TrueRedactScreen(
         }
 
         val audit = lastAudit
+        val savedRedacted = redactedDoc
         if (audit != null) {
             item(key = "audit_summary") {
                 GlassWorkspaceCard(elevated = true) {
@@ -403,6 +455,13 @@ fun TrueRedactScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = PaperMuted
                     )
+                    if (savedRedacted != null) {
+                        WorkspaceDocActionBar(
+                            doc = savedRedacted,
+                            onOpenViewer = onOpenViewer,
+                            onStatusMessage = { statusText = it }
+                        )
+                    }
                 }
             }
         }

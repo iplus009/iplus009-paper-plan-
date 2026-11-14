@@ -13,6 +13,8 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import com.paperplan.app.core.storage.SafSafeWriter
 import com.paperplan.app.core.storage.TempWorkspaceManager
+import com.paperplan.app.core.storage.WorkspaceDoc
+import com.paperplan.app.core.storage.WorkspaceLibrary
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
@@ -74,6 +76,27 @@ object BanglaPdfExporter {
     private const val A4_WIDTH = 595
     private const val A4_HEIGHT = 842
 
+    suspend fun exportToWorkspaceAndAudit(
+        context: Context,
+        document: CanonicalTextDocument,
+        style: BanglaExportStyle,
+        displayName: String = "PaperPlane-Bangla.pdf"
+    ): Pair<WorkspaceDoc, BanglaExportAuditResult> = withContext(Dispatchers.IO) {
+        TempWorkspaceManager.useTempDir(context.cacheDir, "bangla_pdf_ws") { workDir ->
+            val stagedOut = File(workDir, "bangla_export.pdf")
+            val pageCount = renderVectorBanglaPdf(document, style, stagedOut)
+            val savedDoc = WorkspaceLibrary.saveStagedPdf(
+                context = context,
+                stagedPdf = stagedOut,
+                displayName = displayName,
+                tag = "Bangla PDF",
+                pageCount = pageCount
+            )
+            val audit = buildAuditResult(workDir, stagedOut, pageCount, savedDoc.sizeBytes)
+            Pair(savedDoc, audit)
+        }
+    }
+
     suspend fun exportAndAudit(
         context: Context,
         document: CanonicalTextDocument,
@@ -82,116 +105,130 @@ object BanglaPdfExporter {
     ): BanglaExportAuditResult = withContext(Dispatchers.IO) {
         TempWorkspaceManager.useTempDir(context.cacheDir, "bangla_pdf") { workDir ->
             val stagedOut = File(workDir, "bangla_export.pdf")
-            val pdfDoc = PdfDocument()
-
-            val isBook = style == BanglaExportStyle.BOOK_STYLE
-            val marginH = if (isBook) 56 else 44
-            val marginTop = if (isBook) 64 else 48
-            val marginBottom = if (isBook) 60 else 48
-            val contentWidth = A4_WIDTH - marginH * 2
-            val pageBottomLimit = A4_HEIGHT - marginBottom
-
-            val bodyPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.BLACK
-                textSize = if (isBook) 12.5f else 13.5f
-                typeface = if (isBook) Typeface.SERIF else Typeface.SANS_SERIF
-            }
-            val headingPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.BLACK
-                textSize = if (isBook) 18f else 17f
-                typeface = Typeface.create(
-                    if (isBook) Typeface.SERIF else Typeface.SANS_SERIF,
-                    Typeface.BOLD
-                )
-            }
-            val chromePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.DKGRAY
-                textSize = 9.5f
-                typeface = Typeface.SANS_SERIF
-            }
-
-            var pageNumber = 1
-            var pageInfo = PdfDocument.PageInfo.Builder(A4_WIDTH, A4_HEIGHT, pageNumber).create()
-            var page = pdfDoc.startPage(pageInfo)
-            var cursorY = startPageChrome(page.canvas, document.title, isBook, marginH, marginTop, chromePaint)
-
-            fun nextPage() {
-                drawFooter(page.canvas, pageNumber, A4_WIDTH, A4_HEIGHT, chromePaint)
-                pdfDoc.finishPage(page)
-                pageNumber++
-                pageInfo = PdfDocument.PageInfo.Builder(A4_WIDTH, A4_HEIGHT, pageNumber).create()
-                page = pdfDoc.startPage(pageInfo)
-                cursorY = startPageChrome(page.canvas, document.title, isBook, marginH, marginTop, chromePaint)
-            }
-
-            try {
-                for (block in document.blocks) {
-                    val paint = if (block.role == BlockRole.HEADING) headingPaint else bodyPaint
-                    val lineMult = if (isBook) 1.38f else 1.52f
-                    val alignment = if (isBook && block.role == BlockRole.HEADING) {
-                        Layout.Alignment.ALIGN_CENTER
-                    } else {
-                        Layout.Alignment.ALIGN_NORMAL
-                    }
-
-                    val layout = StaticLayout.Builder
-                        .obtain(block.text, 0, block.text.length, paint, contentWidth)
-                        .setAlignment(alignment)
-                        .setLineSpacing(0f, lineMult)
-                        .setIncludePad(false)
-                        .build()
-
-                    for (lineIdx in 0 until layout.lineCount) {
-                        val lineTop = layout.getLineTop(lineIdx)
-                        val lineBottom = layout.getLineBottom(lineIdx)
-                        val lineH = (lineBottom - lineTop).toFloat()
-
-                        if (cursorY + lineH > pageBottomLimit) {
-                            nextPage()
-                        }
-
-                        val canvas = page.canvas
-                        canvas.save()
-                        canvas.translate(marginH.toFloat(), cursorY - lineTop.toFloat())
-                        canvas.clipRect(0, lineTop, contentWidth, lineBottom)
-                        layout.draw(canvas)
-                        canvas.restore()
-                        cursorY += lineH
-                    }
-                    cursorY += if (block.role == BlockRole.HEADING) 14f else 10f
-                }
-
-                drawFooter(page.canvas, pageNumber, A4_WIDTH, A4_HEIGHT, chromePaint)
-                pdfDoc.finishPage(page)
-
-                stagedOut.outputStream().use { out ->
-                    pdfDoc.writeTo(out)
-                    out.flush()
-                }
-            } finally {
-                pdfDoc.close()
-            }
-
+            val pageNumber = renderVectorBanglaPdf(document, style, stagedOut)
             val outBytes = SafSafeWriter.writeTempPdfToUri(context, stagedOut, outputUri)
+            buildAuditResult(workDir, stagedOut, pageNumber, outBytes)
+        }
+    }
 
-            // Preview and audit straight from staged file for deterministic checks
-            val preview = TruePdfRedactor.renderSinglePageFromFile(stagedOut, pageIndex = 0, maxDimension = 1200)
-            val extracted = PdfEngine.pdfMutex.withLock {
-                val mem = MemoryUsageSetting.setupTempFileOnly().setTempDir(workDir)
-                PDDocument.load(stagedOut, mem).use { checkDoc ->
-                    PDFTextStripper().getText(checkDoc).trim()
-                }
+    private suspend fun buildAuditResult(
+        workDir: File,
+        stagedOut: File,
+        pageCount: Int,
+        outBytes: Long
+    ): BanglaExportAuditResult {
+        val preview = TruePdfRedactor.renderSinglePageFromFile(stagedOut, pageIndex = 0, maxDimension = 1200)
+        val extracted = PdfEngine.pdfMutex.withLock {
+            val mem = MemoryUsageSetting.setupTempFileOnly().setTempDir(workDir)
+            PDDocument.load(stagedOut, mem).use { checkDoc ->
+                PDFTextStripper().getText(checkDoc).trim()
             }
+        }
+        val hasBengali = extracted.any { it in '\u0980'..'\u09FF' }
+        return BanglaExportAuditResult(
+            previewBitmap = preview.bitmap,
+            pageCount = pageCount,
+            outputBytes = outBytes,
+            extractedText = extracted,
+            hasBengaliCharacters = hasBengali
+        )
+    }
 
-            val hasBengali = extracted.any { it in '\u0980'..'\u09FF' }
-            BanglaExportAuditResult(
-                previewBitmap = preview.bitmap,
-                pageCount = pageNumber,
-                outputBytes = outBytes,
-                extractedText = extracted,
-                hasBengaliCharacters = hasBengali
+    private fun renderVectorBanglaPdf(
+        document: CanonicalTextDocument,
+        style: BanglaExportStyle,
+        stagedOut: File
+    ): Int {
+        val pdfDoc = PdfDocument()
+
+        val isBook = style == BanglaExportStyle.BOOK_STYLE
+        val marginH = if (isBook) 56 else 44
+        val marginTop = if (isBook) 64 else 48
+        val marginBottom = if (isBook) 60 else 48
+        val contentWidth = A4_WIDTH - marginH * 2
+        val pageBottomLimit = A4_HEIGHT - marginBottom
+
+        val bodyPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = if (isBook) 12.5f else 13.5f
+            typeface = if (isBook) Typeface.SERIF else Typeface.SANS_SERIF
+        }
+        val headingPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = if (isBook) 18f else 17f
+            typeface = Typeface.create(
+                if (isBook) Typeface.SERIF else Typeface.SANS_SERIF,
+                Typeface.BOLD
             )
         }
+        val chromePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.DKGRAY
+            textSize = 9.5f
+            typeface = Typeface.SANS_SERIF
+        }
+
+        var pageNumber = 1
+        var pageInfo = PdfDocument.PageInfo.Builder(A4_WIDTH, A4_HEIGHT, pageNumber).create()
+        var page = pdfDoc.startPage(pageInfo)
+        var cursorY = startPageChrome(page.canvas, document.title, isBook, marginH, marginTop, chromePaint)
+
+        fun nextPage() {
+            drawFooter(page.canvas, pageNumber, A4_WIDTH, A4_HEIGHT, chromePaint)
+            pdfDoc.finishPage(page)
+            pageNumber++
+            pageInfo = PdfDocument.PageInfo.Builder(A4_WIDTH, A4_HEIGHT, pageNumber).create()
+            page = pdfDoc.startPage(pageInfo)
+            cursorY = startPageChrome(page.canvas, document.title, isBook, marginH, marginTop, chromePaint)
+        }
+
+        try {
+            for (block in document.blocks) {
+                val paint = if (block.role == BlockRole.HEADING) headingPaint else bodyPaint
+                val lineMult = if (isBook) 1.38f else 1.52f
+                val alignment = if (isBook && block.role == BlockRole.HEADING) {
+                    Layout.Alignment.ALIGN_CENTER
+                } else {
+                    Layout.Alignment.ALIGN_NORMAL
+                }
+
+                val layout = StaticLayout.Builder
+                    .obtain(block.text, 0, block.text.length, paint, contentWidth)
+                    .setAlignment(alignment)
+                    .setLineSpacing(0f, lineMult)
+                    .setIncludePad(false)
+                    .build()
+
+                for (lineIdx in 0 until layout.lineCount) {
+                    val lineTop = layout.getLineTop(lineIdx)
+                    val lineBottom = layout.getLineBottom(lineIdx)
+                    val lineH = (lineBottom - lineTop).toFloat()
+
+                    if (cursorY + lineH > pageBottomLimit) {
+                        nextPage()
+                    }
+
+                    val canvas = page.canvas
+                    canvas.save()
+                    canvas.translate(marginH.toFloat(), cursorY - lineTop.toFloat())
+                    canvas.clipRect(0, lineTop, contentWidth, lineBottom)
+                    layout.draw(canvas)
+                    canvas.restore()
+                    cursorY += lineH
+                }
+                cursorY += if (block.role == BlockRole.HEADING) 14f else 10f
+            }
+
+            drawFooter(page.canvas, pageNumber, A4_WIDTH, A4_HEIGHT, chromePaint)
+            pdfDoc.finishPage(page)
+
+            stagedOut.outputStream().use { out ->
+                pdfDoc.writeTo(out)
+                out.flush()
+            }
+        } finally {
+            pdfDoc.close()
+        }
+        return pageNumber
     }
 
     private fun startPageChrome(
