@@ -31,6 +31,23 @@ jobs:
       - name: Run unit tests
         run: gradle --no-daemon testDebugUnitTest
 
+      - name: Annotate unit test results
+        if: always()
+        run: |
+          python3 -c '
+          import glob, xml.etree.ElementTree as ET
+          for path in sorted(glob.glob("app/build/test-results/testDebugUnitTest/*.xml")):
+              root = ET.parse(path).getroot()
+              t, f, e, s = root.attrib.get("tests"), root.attrib.get("failures"), root.attrib.get("errors"), root.attrib.get("skipped")
+              print(f"::notice title={path}::tests={t} failures={f} errors={e} skipped={s}")
+              for tc in root.findall("testcase"):
+                  for tag in ("failure", "error"):
+                      el = tc.find(tag)
+                      if el is not None:
+                          msg = (el.attrib.get("message") or el.text or "").replace("\n", " ")[:400]
+                          print(f"::error title={tc.attrib.get(\"classname\")}.{tc.attrib.get(\"name\")}::{msg}")
+          '
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 

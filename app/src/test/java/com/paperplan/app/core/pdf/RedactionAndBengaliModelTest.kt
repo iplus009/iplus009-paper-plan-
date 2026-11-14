@@ -51,7 +51,7 @@ class RedactionAndBengaliModelTest {
         assertEquals(BlockRole.BODY, doc.blocks[1].role)
         assertTrue(doc.blocks[1].text.contains("ক্ষ"))
         assertTrue(doc.blocks[1].text.contains("জ্ঞ"))
-        assertTrue(doc.blocks[1].text.contains("ন্ত্রে".dropLast(1))) // ন্ত্র
+        assertTrue(doc.blocks[1].text.contains("ন্ত্র"))
         assertEquals(BlockRole.BODY, doc.blocks[2].role)
     }
 }

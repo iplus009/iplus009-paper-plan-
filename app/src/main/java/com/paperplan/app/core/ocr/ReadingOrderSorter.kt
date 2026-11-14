@@ -27,31 +27,46 @@ object ReadingOrderSorter {
         val minX = regions.minOf { it.left }
         val maxX = regions.maxOf { it.right }
 
-        // First check horizontal whitespace bands (full-width headers/paragraphs above columns)
+        // Evaluate both horizontal bands (full-width headers/paragraphs) and vertical column gutters,
+        // then split along whichever whitespace separator is wider so columns do not interleave.
         val yCut = findLargestGap(
             intervals = regions.map { it.top to it.bottom },
             domainStart = minY,
             domainEnd = maxY,
             minGap = 0.015f
         )
-        if (yCut != null) {
-            val above = regions.filter { it.bottom <= yCut }
-            val below = regions.filter { it.top >= yCut }
-            if (above.isNotEmpty() && below.isNotEmpty()) {
-                return recursiveSplit(above) + recursiveSplit(below)
-            }
-        }
-
-        // Next check vertical column gutters within the current horizontal band
         val xCut = findLargestGap(
             intervals = regions.map { it.left to it.right },
             domainStart = minX,
             domainEnd = maxX,
             minGap = 0.03f
         )
+
+        val preferVerticalColumnSplit = when {
+            xCut != null && yCut == null -> true
+            xCut != null && yCut != null -> xCut.gapSize >= yCut.gapSize
+            else -> false
+        }
+
+        if (preferVerticalColumnSplit && xCut != null) {
+            val leftCol = regions.filter { it.right <= xCut.midpoint }
+            val rightCol = regions.filter { it.left >= xCut.midpoint }
+            if (leftCol.isNotEmpty() && rightCol.isNotEmpty()) {
+                return recursiveSplit(leftCol) + recursiveSplit(rightCol)
+            }
+        }
+
+        if (yCut != null) {
+            val above = regions.filter { it.bottom <= yCut.midpoint }
+            val below = regions.filter { it.top >= yCut.midpoint }
+            if (above.isNotEmpty() && below.isNotEmpty()) {
+                return recursiveSplit(above) + recursiveSplit(below)
+            }
+        }
+
         if (xCut != null) {
-            val leftCol = regions.filter { it.right <= xCut }
-            val rightCol = regions.filter { it.left >= xCut }
+            val leftCol = regions.filter { it.right <= xCut.midpoint }
+            val rightCol = regions.filter { it.left >= xCut.midpoint }
             if (leftCol.isNotEmpty() && rightCol.isNotEmpty()) {
                 return recursiveSplit(leftCol) + recursiveSplit(rightCol)
             }
@@ -73,28 +88,36 @@ object ReadingOrderSorter {
         }
     }
 
+    private data class GapSplit(
+        val midpoint: Float,
+        val gapSize: Float
+    )
+
     private fun findLargestGap(
         intervals: List<Pair<Float, Float>>,
         domainStart: Float,
         domainEnd: Float,
         minGap: Float
-    ): Float? {
+    ): GapSplit? {
         if (intervals.size < 2 || domainEnd <= domainStart) return null
         val sorted = intervals.sortedBy { it.first }
         var curEnd = sorted[0].second
         var bestGap = minGap
-        var bestMid: Float? = null
+        var bestSplit: GapSplit? = null
 
         for (i in 1 until sorted.size) {
             val (start, end) = sorted[i]
             val gap = start - curEnd
             if (gap > bestGap) {
                 bestGap = gap
-                bestMid = curEnd + gap * 0.5f
+                bestSplit = GapSplit(
+                    midpoint = curEnd + gap * 0.5f,
+                    gapSize = gap
+                )
             }
             if (end > curEnd) curEnd = end
         }
-        return bestMid
+        return bestSplit
     }
 }
 
