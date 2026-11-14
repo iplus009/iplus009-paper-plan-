@@ -67,7 +67,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PaperPlane-v0.2.0-debug-apk
+          name: PaperPlane-v0.2.1-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
@@ -75,8 +75,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v0.2.0-dev"
+          TAG="v0.2.1-dev"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --target "${{ github.sha }}" --prerelease --title "Paper Plane v0.2.0 Dev Preview" --notes "Automated CI debug APK build for emulator & device verification."
+            gh release create "$TAG" --target "${{ github.sha }}" --prerelease --title "Paper Plane v0.2.1 Dev Preview" --notes "Automated CI debug APK build for emulator & device verification."
           fi
           gh release upload "$TAG" app/build/outputs/apk/debug/*.apk --clobber

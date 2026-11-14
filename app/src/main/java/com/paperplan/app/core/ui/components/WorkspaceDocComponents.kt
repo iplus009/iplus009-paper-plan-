@@ -244,35 +244,38 @@ fun WorkspaceDocActionBar(
                 Button(
                     onClick = { onOpenViewer(doc) },
                     colors = ButtonDefaults.buttonColors(containerColor = PaperViolet),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
                     modifier = Modifier
-                        .weight(1.1f)
+                        .weight(1f)
                         .defaultMinSize(minHeight = 48.dp)
                 ) {
-                    Icon(Icons.Outlined.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.size(6.dp))
+                    Icon(Icons.Outlined.Visibility, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Spacer(Modifier.size(4.dp))
                     Text("View", maxLines = 1)
                 }
             }
 
             OutlinedButton(
                 onClick = { saveSafLauncher.launch(doc.displayName) },
+                contentPadding = PaddingValues(horizontal = 8.dp),
                 modifier = Modifier
                     .weight(1f)
                     .defaultMinSize(minHeight = 48.dp)
             ) {
-                Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.size(6.dp))
+                Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.size(4.dp))
                 Text("Save", maxLines = 1)
             }
 
             OutlinedButton(
                 onClick = { shareWorkspaceDoc(context, doc, onStatusMessage) },
+                contentPadding = PaddingValues(horizontal = 8.dp),
                 modifier = Modifier
                     .weight(1f)
                     .defaultMinSize(minHeight = 48.dp)
             ) {
-                Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.size(6.dp))
+                Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.size(4.dp))
                 Text("Share", maxLines = 1)
             }
         }

@@ -378,48 +378,52 @@ fun ScannerScreen(
         if (src != null) {
             item(key = "scanner_quad_editor") {
                 GlassWorkspaceCard {
+                    Text("Drag 4 Page Corners", style = MaterialTheme.typography.titleMedium)
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Drag 4 Page Corners", style = MaterialTheme.typography.titleMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
-                                onClick = {
-                                    scope.launch {
-                                        val snapped = withContext(Dispatchers.Default) {
-                                            AutoQuadEstimator.estimateFromBitmap(src)
-                                        }
-                                        quadCorners = snapped
-                                        runGpuWarp(src, snapped, selectedMode)
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    val snapped = withContext(Dispatchers.Default) {
+                                        AutoQuadEstimator.estimateFromBitmap(src)
                                     }
-                                },
-                                enabled = !busy,
-                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
-                            ) {
-                                Icon(Icons.Outlined.AutoFixHigh, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.size(4.dp))
-                                Text("Auto-Snap", maxLines = 1)
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    val full = QuadCorners(
-                                        Point2D(0f, 0f),
-                                        Point2D(1f, 0f),
-                                        Point2D(1f, 1f),
-                                        Point2D(0f, 1f)
-                                    )
-                                    quadCorners = full
-                                    scope.launch { runGpuWarp(src, full, selectedMode) }
-                                },
-                                enabled = !busy,
-                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
-                            ) {
-                                Icon(Icons.Outlined.CropFree, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.size(4.dp))
-                                Text("Full", maxLines = 1)
-                            }
+                                    quadCorners = snapped
+                                    runGpuWarp(src, snapped, selectedMode)
+                                }
+                            },
+                            enabled = !busy,
+                            contentPadding = PaddingValues(horizontal = 10.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .defaultMinSize(minHeight = 48.dp)
+                        ) {
+                            Icon(Icons.Outlined.AutoFixHigh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(6.dp))
+                            Text("Auto-Snap", maxLines = 1)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                val full = QuadCorners(
+                                    Point2D(0f, 0f),
+                                    Point2D(1f, 0f),
+                                    Point2D(1f, 1f),
+                                    Point2D(0f, 1f)
+                                )
+                                quadCorners = full
+                                scope.launch { runGpuWarp(src, full, selectedMode) }
+                            },
+                            enabled = !busy,
+                            contentPadding = PaddingValues(horizontal = 10.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .defaultMinSize(minHeight = 48.dp)
+                        ) {
+                            Icon(Icons.Outlined.CropFree, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(6.dp))
+                            Text("Full Frame", maxLines = 1)
                         }
                     }
 
@@ -502,13 +506,14 @@ fun ScannerScreen(
                             },
                             enabled = !busy,
                             colors = ButtonDefaults.buttonColors(containerColor = PaperMint),
+                            contentPadding = PaddingValues(horizontal = 8.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .defaultMinSize(minHeight = 48.dp)
                         ) {
-                            Icon(Icons.Outlined.PlaylistAdd, contentDescription = null)
-                            Spacer(Modifier.size(6.dp))
-                            Text("Add to Batch (${batchPages.size})", maxLines = 1)
+                            Icon(Icons.Outlined.PlaylistAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(4.dp))
+                            Text("Add Batch (${batchPages.size})", maxLines = 1)
                         }
 
                         OutlinedButton(
@@ -538,12 +543,13 @@ fun ScannerScreen(
                                 }
                             },
                             enabled = !busy,
+                            contentPadding = PaddingValues(horizontal = 8.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .defaultMinSize(minHeight = 48.dp)
                         ) {
-                            Icon(Icons.Outlined.PictureAsPdf, contentDescription = null)
-                            Spacer(Modifier.size(6.dp))
+                            Icon(Icons.Outlined.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(4.dp))
                             Text("Quick 1p PDF", maxLines = 1)
                         }
                     }

@@ -281,7 +281,7 @@ fun HomeScreen(
                             )
                         }
                     }
-                    StatusBadgePill(label = "v0.2.0 Live", accent = PaperMint)
+                    StatusBadgePill(label = "v0.2.1 Live", accent = PaperMint)
                 }
 
                 Text(statusText, style = MaterialTheme.typography.bodySmall, color = PaperInfoText)

@@ -41,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,7 @@ import com.paperplan.app.core.ui.theme.PaperInfoText
 import com.paperplan.app.core.ui.theme.PaperMint
 import com.paperplan.app.core.ui.theme.PaperMuted
 import com.paperplan.app.core.ui.theme.PaperScanBlue
+import com.paperplan.app.core.ui.theme.PaperText
 import com.paperplan.app.core.ui.theme.PaperViolet
 import kotlinx.coroutines.launch
 
@@ -200,14 +202,6 @@ fun PdfViewerScreen(
         if (currentRender != null && doc != null) {
             item(key = "viewer_stage_${doc.id}_${currentRender.pageIndex}") {
                 GlassWorkspaceCard {
-                    GpuZoomableBitmapPreview(
-                        bitmap = currentRender.bitmap,
-                        contentDescription = "PDF page ${currentRender.pageIndex + 1}",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(440.dp)
-                    )
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -216,6 +210,7 @@ fun PdfViewerScreen(
                         OutlinedButton(
                             onClick = { pageIndex = (currentRender.pageIndex - 1).coerceAtLeast(0) },
                             enabled = !busy && currentRender.pageIndex > 0,
+                            contentPadding = PaddingValues(horizontal = 12.dp),
                             modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                         ) {
                             Icon(Icons.Outlined.ChevronLeft, contentDescription = null)
@@ -234,6 +229,7 @@ fun PdfViewerScreen(
                                     .coerceAtMost(currentRender.totalPages - 1)
                             },
                             enabled = !busy && currentRender.pageIndex < currentRender.totalPages - 1,
+                            contentPadding = PaddingValues(horizontal = 12.dp),
                             modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                         ) {
                             Text("Next")
@@ -251,8 +247,10 @@ fun PdfViewerScreen(
                                 Button(
                                     onClick = { pageIndex = idx },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (selected) PaperViolet else MaterialTheme.colorScheme.surfaceVariant
+                                        containerColor = if (selected) PaperViolet else MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = if (selected) Color(0xFF140F29) else PaperText
                                     ),
+                                    contentPadding = PaddingValues(horizontal = 12.dp),
                                     modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                                 ) {
                                     Text("${idx + 1}")
@@ -260,6 +258,14 @@ fun PdfViewerScreen(
                             }
                         }
                     }
+
+                    GpuZoomableBitmapPreview(
+                        bitmap = currentRender.bitmap,
+                        contentDescription = "PDF page ${currentRender.pageIndex + 1}",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(360.dp)
+                    )
                 }
             }
 
@@ -276,31 +282,34 @@ fun PdfViewerScreen(
                     ) {
                         OutlinedButton(
                             onClick = { onOpenOrganize(doc) },
+                            contentPadding = PaddingValues(horizontal = 6.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .defaultMinSize(minHeight = 48.dp)
                         ) {
-                            Icon(Icons.Outlined.ViewAgenda, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Outlined.ViewAgenda, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.size(4.dp))
                             Text("Organize", maxLines = 1)
                         }
                         OutlinedButton(
                             onClick = { onOpenCompress(doc) },
+                            contentPadding = PaddingValues(horizontal = 6.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .defaultMinSize(minHeight = 48.dp)
                         ) {
-                            Icon(Icons.Outlined.Compress, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Outlined.Compress, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.size(4.dp))
                             Text("Compress", maxLines = 1)
                         }
                         OutlinedButton(
                             onClick = { onOpenRedact(doc) },
+                            contentPadding = PaddingValues(horizontal = 6.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .defaultMinSize(minHeight = 48.dp)
                         ) {
-                            Icon(Icons.Outlined.Security, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Outlined.Security, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.size(4.dp))
                             Text("Redact", maxLines = 1)
                         }
