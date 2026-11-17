@@ -2,6 +2,9 @@
 
 **Make your own PDF better than anyone.**
 
+[![Download APK](https://img.shields.io/badge/Download-Android%20APK-2ea44f?style=for-the-badge&logo=android&logoColor=white)](https://github.com/iplus009/iplus009-paper-plane-/releases/download/v0.2.1-dev/PaperPlane-v0.2.1-debug.apk)
+[![All Releases](https://img.shields.io/badge/All-Releases-blue?style=for-the-badge&logo=github)](https://github.com/iplus009/iplus009-paper-plane-/releases)
+
 Paper Plane is a GPU-accelerated, privacy-first Android PDF workspace from **iPlus**.
 
 ## Working in `v0.1.6` (Phase 0: GPU & Bangla Physics Spike)
@@ -33,7 +36,9 @@ The source files are opened read-only; operations create a new output file. Plan
 
 ## Build
 
-Open [GitHub Actions](https://github.com/iplus009/iplus009-paper-plan-/actions), select a successful **Android Debug Build**, and download the `PaperPlane-v0.1.6-debug-apk` artifact.
+The **Download Android APK** button at the top downloads the latest published debug build currently linked here: [PaperPlane-v0.2.1-debug.apk](https://github.com/iplus009/iplus009-paper-plane-/releases/download/v0.2.1-dev/PaperPlane-v0.2.1-debug.apk).
+
+To view all versions, visit [GitHub Releases](https://github.com/iplus009/iplus009-paper-plane-/releases). For build history, open [GitHub Actions](https://github.com/iplus009/iplus009-paper-plane-/actions).
 
 ## Source projects and licensing
 
